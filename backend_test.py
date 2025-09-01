@@ -14,6 +14,8 @@ class Web3EmailAPITester:
         self.challenge_data = None
         self.wallet_address = "0x742d35Cc6634C0532925a3b8D404fddF6fE7d396"
         self.wallet_type = "metamask"
+        self.email_id = None
+        self.test_results = []
 
     def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
         """Run a single API test"""
