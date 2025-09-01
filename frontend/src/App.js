@@ -18,9 +18,11 @@ import { Toaster } from "./components/ui/sonner";
 import { 
   Wallet, Mail, Shield, Clock, Hash, CheckCircle, AlertCircle, User, Send, Eye, Plus, X, 
   CreditCard, Crown, Zap, Upload, Download, Lock, Globe, FileText, Users, Settings,
-  Star, TrendingUp, Package, Gift, Coins, Diamond, Sparkles
+  Star, TrendingUp, Package, Gift, Coins, Diamond, Sparkles, Banknote, Image as ImageIcon
 } from "lucide-react";
 import axios from "axios";
+import useWeb3 from "./hooks/useWeb3";
+import CryptoTransferModal from "./components/CryptoTransferModal";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
