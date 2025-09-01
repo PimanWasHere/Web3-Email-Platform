@@ -1092,7 +1092,7 @@ function App() {
               
               <div className="space-y-4">
                 <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-                  Connect Your Wallet to Access Advanced Features
+                  Connect Your Wallet to Send Crypto via Email
                 </h2>
                 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
