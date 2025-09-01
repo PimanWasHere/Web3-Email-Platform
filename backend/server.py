@@ -139,9 +139,24 @@ class EmailTimestampRequest(BaseModel):
     email_data: EmailData
     metadata: Optional[Dict[str, Any]] = None
 
-class RicardianContractRequest(BaseModel):
-    agreement_data: Dict[str, Any]
-    parties: List[str]
+class TokenTransferRequest(BaseModel):
+    from_address: str
+    to_address: str
+    token_address: Optional[str] = None  # None for ETH, contract address for tokens
+    amount: str
+    token_type: str = "ERC20"  # ERC20, ERC721, ERC1155
+
+class NFTTransferRequest(BaseModel):
+    from_address: str
+    to_address: str
+    contract_address: str
+    token_id: int
+    token_type: str = "ERC721"
+
+class CryptoEmailRequest(BaseModel):
+    email_data: EmailData
+    crypto_transfer: Optional[Dict[str, Any]] = None
+    include_transfer: bool = False
 
 class User(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
