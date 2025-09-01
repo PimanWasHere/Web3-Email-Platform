@@ -404,46 +404,99 @@ class Web3EmailAPITester:
         return success1 and success2
 
 def main():
-    print("🚀 Starting Web3 Email Platform API Tests")
-    print("=" * 50)
+    print("🚀 Starting Web3 Email Platform v2.0 Comprehensive API Tests")
+    print("=" * 70)
     
     tester = Web3EmailAPITester()
     
     # Run all tests in sequence
     test_results = []
     
-    # Basic API tests
-    test_results.append(("Health Check", tester.test_health_check()))
+    # Basic v2.0 API tests
+    print("\n📋 BASIC v2.0 API TESTS")
+    print("-" * 40)
+    test_results.append(("Health Check v2.0", tester.test_health_check()))
     test_results.append(("Root Endpoint", tester.test_root_endpoint()))
+    test_results.append(("Subscription Tiers", tester.test_subscription_tiers()))
+    test_results.append(("Credit Packages", tester.test_credit_packages()))
     
     # Authentication flow tests
-    test_results.append(("Create Auth Challenge", tester.test_create_auth_challenge()))
-    test_results.append(("Verify Wallet Signature", tester.test_verify_wallet_signature()))
+    print("\n🔐 AUTHENTICATION TESTS")
+    print("-" * 40)
+    auth_success = tester.test_create_auth_challenge()
+    test_results.append(("Create Auth Challenge", auth_success))
     
-    # Email functionality tests (require authentication)
-    test_results.append(("Timestamp Email", tester.test_timestamp_email()))
-    test_results.append(("Verify Email", tester.test_verify_email()))
-    test_results.append(("Get User Emails", tester.test_get_user_emails()))
+    if auth_success:
+        verify_success = tester.test_verify_wallet_signature()
+        test_results.append(("Verify Wallet Signature", verify_success))
+        
+        if verify_success:
+            test_results.append(("User Profile v2.0", tester.test_user_profile()))
+    
+    # v2.0 Email functionality tests (require authentication)
+    print("\n📧 v2.0 EMAIL FUNCTIONALITY TESTS")
+    print("-" * 40)
+    if tester.token:
+        test_results.append(("Advanced Email Sending (IPFS)", tester.test_advanced_email_sending()))
+        time.sleep(1)  # Brief pause for IPFS processing
+        test_results.append(("Email History v2.0", tester.test_get_user_emails()))
+        test_results.append(("Email IPFS Retrieval", tester.test_email_ipfs_retrieval()))
+    
+    # v2.0 Payment system tests
+    print("\n💳 v2.0 PAYMENT SYSTEM TESTS")
+    print("-" * 40)
+    if tester.token:
+        test_results.append(("Payment Endpoints", tester.test_payment_endpoints()))
+    
+    # Edge case and stress tests
+    print("\n⚠️  EDGE CASE & STRESS TESTS")
+    print("-" * 40)
+    if tester.token:
+        test_results.append(("Credit Exhaustion Test", tester.test_insufficient_credits_scenario()))
     
     # Legacy compatibility tests
+    print("\n🔄 LEGACY COMPATIBILITY TESTS")
+    print("-" * 40)
     test_results.append(("Legacy Status Endpoints", tester.test_legacy_status_endpoints()))
     
     # Print final results
-    print("\n" + "=" * 50)
-    print("📊 TEST RESULTS SUMMARY")
-    print("=" * 50)
+    print("\n" + "=" * 70)
+    print("📊 COMPREHENSIVE TEST RESULTS SUMMARY")
+    print("=" * 70)
+    
+    passed_tests = []
+    failed_tests = []
     
     for test_name, result in test_results:
         status = "✅ PASS" if result else "❌ FAIL"
         print(f"{status} - {test_name}")
+        
+        if result:
+            passed_tests.append(test_name)
+        else:
+            failed_tests.append(test_name)
     
-    print(f"\n📈 Overall: {tester.tests_passed}/{tester.tests_run} tests passed")
+    print(f"\n📈 Overall Results: {tester.tests_passed}/{tester.tests_run} individual tests passed")
+    print(f"🎯 Test Categories: {len(passed_tests)}/{len(test_results)} categories passed")
     
-    if tester.tests_passed == tester.tests_run:
-        print("🎉 All tests passed! Backend API is working correctly.")
+    # Print detailed failure analysis
+    if failed_tests:
+        print(f"\n❌ FAILED TEST CATEGORIES ({len(failed_tests)}):")
+        for test_name in failed_tests:
+            print(f"   - {test_name}")
+        
+        print(f"\n🔍 DETAILED FAILURE ANALYSIS:")
+        for result in tester.test_results:
+            if not result['success'] and result['details']:
+                print(f"   - {result['name']}: {result['details']}")
+    
+    if len(passed_tests) == len(test_results):
+        print("\n🎉 ALL TEST CATEGORIES PASSED! Web3 Email Platform v2.0 Backend is fully functional.")
+        print("✨ Features verified: IPFS Storage, Stripe Payments, Advanced Encryption, Subscription Tiers")
         return 0
     else:
-        print("⚠️  Some tests failed. Please check the backend implementation.")
+        print(f"\n⚠️  {len(failed_tests)} test categories failed. Backend needs attention.")
+        print("🔧 Please review the failed tests and fix the backend implementation.")
         return 1
 
 if __name__ == "__main__":
