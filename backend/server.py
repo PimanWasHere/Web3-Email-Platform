@@ -137,13 +137,13 @@ class WalletAuthService:
             print(f"Hedera signature verification failed: {e}")
             return False
     
-    def _verify_signature(self, message: str, signature: str, public_key: str, wallet_type: str = "metamask") -> bool:
+    def _verify_signature(self, message: str, signature: str, wallet_address: str, wallet_type: str = "metamask") -> bool:
         """Verify wallet signature for authentication"""
         try:
             if wallet_type.lower() == "metamask":
-                return self._verify_ethereum_signature(message, signature, public_key)
+                return self._verify_ethereum_signature(message, signature, wallet_address)
             elif wallet_type.lower() == "hashpack":
-                return self._verify_hedera_signature(message, signature, public_key)
+                return self._verify_hedera_signature(message, signature, wallet_address)
             else:
                 return False
         except Exception as e:
