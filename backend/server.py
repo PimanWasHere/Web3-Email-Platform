@@ -25,6 +25,7 @@ from cryptography.fernet import Fernet
 
 # Web3 Integration
 from web3_service import web3_service
+from web3 import Web3
 
 # Advanced Services
 from ai_service import ai_assistant
