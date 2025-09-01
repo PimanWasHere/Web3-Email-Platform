@@ -257,6 +257,21 @@ const AdvancedEmailComposer = ({ userProfile, onEmailSent }) => {
     setAttachments(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleCryptoTransferComplete = (transferData) => {
+    setCryptoTransferData(transferData);
+    setShowCryptoModal(false);
+    
+    // Add crypto transfer details to email body
+    const cryptoInfo = `\n\n--- Crypto Transfer Details ---\nTransaction Hash: ${transferData.hash}\nType: ${transferData.type}\nToken: ${transferData.token?.symbol || 'ETH'}\nAmount: ${transferData.amount || 'N/A'}\nRecipient: ${transferData.to}\n\nView on Etherscan: https://etherscan.io/tx/${transferData.hash}`;
+    
+    setEmailData(prev => ({
+      ...prev,
+      body: prev.body + cryptoInfo
+    }));
+    
+    toast.success('Crypto transfer completed! Details added to email.');
+  };
+
   const handleSendEmail = async () => {
     try {
       setSending(true);
@@ -264,8 +279,15 @@ const AdvancedEmailComposer = ({ userProfile, onEmailSent }) => {
       const token = localStorage.getItem('authToken');
       const formData = new FormData();
       
+      // Prepare email data with crypto transfer info
+      const emailDataWithCrypto = {
+        ...emailData,
+        crypto_transfer_included: includeCrypto && cryptoTransferData,
+        crypto_transfer_hash: cryptoTransferData?.hash
+      };
+      
       // Add email data
-      formData.append('email_data', JSON.stringify(emailData));
+      formData.append('email_data', JSON.stringify(emailDataWithCrypto));
       
       // Add attachments
       attachments.forEach((file, index) => {
@@ -280,7 +302,12 @@ const AdvancedEmailComposer = ({ userProfile, onEmailSent }) => {
       });
 
       if (response.data.success) {
-        toast.success('Email sent and stored on IPFS with blockchain verification!');
+        toast.success('Email sent with blockchain verification!');
+        if (cryptoTransferData) {
+          toast.success('Crypto transfer details included in email!');
+        }
+        
+        // Reset form
         setEmailData({
           from_address: '',
           to_addresses: [],
@@ -289,6 +316,9 @@ const AdvancedEmailComposer = ({ userProfile, onEmailSent }) => {
           attachments: []
         });
         setAttachments([]);
+        setCryptoTransferData(null);
+        setIncludeCrypto(false);
+        
         if (onEmailSent) onEmailSent(response.data.timestamp);
       }
 
