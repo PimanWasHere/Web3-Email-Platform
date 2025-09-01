@@ -1349,6 +1349,352 @@ async def get_user_crypto_transactions(
             detail=f"Failed to get crypto transactions: {str(e)}"
         )
 
+# ===== AI ASSISTANT ENDPOINTS =====
+@api_router.post("/ai/generate-email")
+async def generate_ai_email(
+    context: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Generate AI-powered email content"""
+    try:
+        generated_content = await ai_assistant.generate_email_content(
+            context=context,
+            email_type=context.get("email_type", "professional")
+        )
+        
+        return {
+            "success": True,
+            "generated_content": generated_content,
+            "user_id": current_user["user_id"]
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate AI email: {str(e)}"
+        )
+
+@api_router.post("/ai/analyze-sentiment")
+async def analyze_email_sentiment(
+    email_content: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Analyze email sentiment and provide suggestions"""
+    try:
+        analysis = await ai_assistant.analyze_email_sentiment(email_content)
+        return {
+            "success": True,
+            "analysis": analysis,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to analyze sentiment: {str(e)}"
+        )
+
+@api_router.post("/ai/suggest-crypto")
+async def suggest_crypto_opportunities(
+    email_content: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Suggest crypto opportunities based on email content"""
+    try:
+        user_context = {"user_id": current_user["user_id"]}
+        suggestions = await ai_assistant.suggest_crypto_opportunities(email_content, user_context)
+        
+        return {
+            "success": True,
+            "suggestions": suggestions,
+            "count": len(suggestions)
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to suggest crypto opportunities: {str(e)}"
+        )
+
+@api_router.post("/ai/smart-contract-template")
+async def generate_smart_contract_template(
+    contract_type: str,
+    parameters: Dict[str, Any],
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Generate smart contract templates"""
+    try:
+        template = await ai_assistant.generate_smart_contract_template(contract_type, parameters)
+        
+        return {
+            "success": True,
+            "template": template,
+            "contract_type": contract_type
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate smart contract template: {str(e)}"
+        )
+
+# ===== MULTI-CHAIN ENDPOINTS =====
+@api_router.get("/multichain/supported-chains")
+async def get_supported_chains():
+    """Get all supported blockchain networks"""
+    try:
+        chains = multi_chain_service.get_supported_chains()
+        return {
+            "chains": chains,
+            "count": len(chains)
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get supported chains: {str(e)}"
+        )
+
+@api_router.get("/multichain/balances/{chain}/{address}")
+async def get_chain_balance(
+    chain: str,
+    address: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get balance for specific chain"""
+    try:
+        balance = await multi_chain_service.get_chain_balance(chain, address)
+        return balance
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get chain balance: {str(e)}"
+        )
+
+@api_router.get("/multichain/all-balances/{address}")
+async def get_all_chain_balances(
+    address: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get balances across all supported chains"""
+    try:
+        balances = await multi_chain_service.get_all_chain_balances(address)
+        return balances
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get all chain balances: {str(e)}"
+        )
+
+@api_router.get("/multichain/tokens/{chain}/{address}")
+async def get_chain_tokens(
+    chain: str,
+    address: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get token balances for specific chain"""
+    try:
+        tokens = await multi_chain_service.get_chain_tokens(chain, address)
+        return {
+            "chain": chain,
+            "address": address,
+            "tokens": tokens,
+            "count": len(tokens)
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get chain tokens: {str(e)}"
+        )
+
+@api_router.post("/multichain/estimate-cross-chain-fee")
+async def estimate_cross_chain_fee(
+    from_chain: str,
+    to_chain: str,
+    amount: float,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Estimate cross-chain transfer fees"""
+    try:
+        estimate = await multi_chain_service.estimate_cross_chain_fee(from_chain, to_chain, amount)
+        return estimate
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to estimate cross-chain fees: {str(e)}"
+        )
+
+@api_router.get("/multichain/chain-status/{chain}")
+async def get_chain_status(
+    chain: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get blockchain network status"""
+    try:
+        status = await multi_chain_service.get_chain_status(chain)
+        return status
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get chain status: {str(e)}"
+        )
+
+@api_router.post("/multichain/recommend-chain")
+async def recommend_chain(
+    transfer_amount: float,
+    recipient_address: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get chain recommendation for transfer"""
+    try:
+        recommendation = await multi_chain_service.get_recommended_chain(transfer_amount, recipient_address)
+        return recommendation
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get chain recommendation: {str(e)}"
+        )
+
+# ===== ANALYTICS ENDPOINTS =====
+@api_router.get("/analytics/user-portfolio")
+async def get_user_portfolio_analytics(
+    timeframe: str = "30d",
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get comprehensive user portfolio analytics"""
+    try:
+        analytics = await analytics_service.get_user_portfolio_analytics(
+            user_id=current_user["user_id"],
+            timeframe=timeframe
+        )
+        return analytics
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get user portfolio analytics: {str(e)}"
+        )
+
+@api_router.get("/analytics/platform")
+async def get_platform_analytics(
+    timeframe: str = "30d",
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get platform-wide analytics (admin only)"""
+    try:
+        # In production, add admin role check
+        analytics = await analytics_service.get_platform_analytics(timeframe)
+        return analytics
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get platform analytics: {str(e)}"
+        )
+
+@api_router.get("/analytics/crypto-market")
+async def get_crypto_market_analytics():
+    """Get crypto market analytics and trends"""
+    try:
+        market_analytics = await analytics_service.get_crypto_market_analytics()
+        return market_analytics
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get crypto market analytics: {str(e)}"
+        )
+
+@api_router.get("/analytics/risk-assessment")
+async def get_user_risk_assessment(
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get risk assessment for user's crypto activities"""
+    try:
+        risk_assessment = await analytics_service.get_risk_assessment(current_user["user_id"])
+        return risk_assessment
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get risk assessment: {str(e)}"
+        )
+
+# ===== ENHANCED SECURITY ENDPOINTS =====
+@api_router.post("/security/validate-address")
+async def validate_crypto_address(
+    address: str,
+    chain: str = "ethereum",
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Validate cryptocurrency address format"""
+    try:
+        if chain == "ethereum" or chain in ["polygon", "arbitrum", "optimism", "bsc"]:
+            is_valid = web3_service.is_valid_address(address)
+            checksum_address = Web3.to_checksum_address(address) if is_valid else None
+        else:
+            is_valid = False
+            checksum_address = None
+        
+        return {
+            "address": address,
+            "chain": chain,
+            "is_valid": is_valid,
+            "checksum_address": checksum_address,
+            "validation_timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to validate address: {str(e)}"
+        )
+
+@api_router.post("/security/address-reputation")
+async def check_address_reputation(
+    address: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Check address reputation and security status"""
+    try:
+        # Mock reputation check (in production, integrate with security APIs)
+        reputation_score = 85  # 0-100 scale
+        
+        flags = []
+        if reputation_score < 50:
+            flags.append("low_reputation")
+        if reputation_score < 30:
+            flags.append("high_risk")
+        
+        # Mock analysis
+        analysis = {
+            "reputation_score": reputation_score,
+            "security_flags": flags,
+            "transaction_count": 1234,
+            "first_seen": "2023-01-15",
+            "last_activity": "2024-09-01",
+            "associated_labels": ["exchange", "verified"],
+            "risk_level": "low" if reputation_score > 70 else "medium" if reputation_score > 40 else "high"
+        }
+        
+        return {
+            "address": address,
+            "analysis": analysis,
+            "checked_at": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to check address reputation: {str(e)}"
+        )
+
 @api_router.get("/user/profile")
 async def get_user_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get user profile and subscription info"""
