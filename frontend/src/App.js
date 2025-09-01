@@ -1134,37 +1134,61 @@ function App() {
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
               <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                Advanced Web3 Email Features
+                Web3 Email + Crypto Transfer Features
               </h2>
               <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-                Experience the next generation of email communication with blockchain verification, 
-                decentralized storage, and enterprise-grade security.
+                Send emails with cryptocurrency, NFTs, and tokens. The first platform to combine 
+                traditional email with blockchain asset transfers and decentralized storage.
               </p>
             </div>
             
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-xl border border-green-200">
+                <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Banknote className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold mb-4 text-center">Token Transfers</h3>
+                <p className="text-gray-600 text-center">Send ERC-20 tokens like USDC, USDT, DAI directly through email with MetaMask integration.</p>
+              </div>
+              
               <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-8 rounded-xl border border-purple-200">
                 <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <Diamond className="w-8 h-8 text-white" />
+                  <ImageIcon className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold mb-4 text-center">Premium Subscriptions</h3>
-                <p className="text-gray-600 text-center">Choose from Basic, Pro, or Enterprise tiers with increasing features and capabilities.</p>
+                <h3 className="text-xl font-semibold mb-4 text-center">NFT Transfers</h3>
+                <p className="text-gray-600 text-center">Send ERC-721 and ERC-1155 NFTs with metadata display and ownership verification.</p>
               </div>
               
               <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-8 rounded-xl border border-blue-200">
                 <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Lock className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold mb-4 text-center">Advanced Encryption</h3>
-                <p className="text-gray-600 text-center">Multi-level encryption with enterprise-grade security for sensitive communications.</p>
+                <h3 className="text-xl font-semibold mb-4 text-center">Secure Transfers</h3>
+                <p className="text-gray-600 text-center">All transfers are cryptographically verified with transaction hashes included in emails.</p>
               </div>
               
-              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-xl border border-green-200">
-                <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
+              <div className="bg-gradient-to-br from-orange-50 to-red-50 p-8 rounded-xl border border-orange-200">
+                <div className="w-16 h-16 bg-gradient-to-r from-orange-500 to-red-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Zap className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold mb-4 text-center">Gas Optimization</h3>
+                <p className="text-gray-600 text-center">Smart gas estimation and optimization for cost-effective blockchain transactions.</p>
+              </div>
+              
+              <div className="bg-gradient-to-br from-pink-50 to-rose-50 p-8 rounded-xl border border-pink-200">
+                <div className="w-16 h-16 bg-gradient-to-r from-pink-500 to-rose-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Diamond className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-semibold mb-4 text-center">Premium Features</h3>
+                <p className="text-gray-600 text-center">Advanced encryption, delivery guarantees, and enterprise-grade security for crypto transfers.</p>
+              </div>
+              
+              <div className="bg-gradient-to-br from-yellow-50 to-amber-50 p-8 rounded-xl border border-yellow-200">
+                <div className="w-16 h-16 bg-gradient-to-r from-yellow-500 to-amber-500 rounded-full flex items-center justify-center mx-auto mb-6">
                   <Upload className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-xl font-semibold mb-4 text-center">Large Attachments</h3>
-                <p className="text-gray-600 text-center">Send files up to 500MB with Enterprise tier, stored securely on IPFS.</p>
+                <h3 className="text-xl font-semibold mb-4 text-center">IPFS Integration</h3>
+                <p className="text-gray-600 text-center">Decentralized storage for email content and crypto transaction metadata.</p>
               </div>
             </div>
           </div>
