@@ -1048,7 +1048,7 @@ async def timestamp_email_legacy(
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
     """Legacy endpoint - redirect to new send endpoint"""
-    return await send_email_advanced(request, None, current_user)
+    return await send_email_advanced(request.email_data, None, current_user)
 
 @api_router.post("/status", response_model=StatusCheck)
 async def create_status_check(input: StatusCheckCreate):
