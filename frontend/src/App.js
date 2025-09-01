@@ -1055,16 +1055,22 @@ function App() {
               <h1 className="text-6xl font-bold text-gray-900 mb-6 leading-tight">
                 Web3 Email Platform
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
-                  v2.0 Advanced
+                  v2.0 + Crypto Transfers
                 </span>
               </h1>
               
               <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                Revolutionary email platform with IPFS decentralized storage, Stripe payments, 
+                Revolutionary email platform with IPFS storage, Stripe payments, NFT & token transfers,
                 advanced encryption, and smart contract integration on Hedera network.
               </p>
               
               <div className="grid md:grid-cols-4 gap-6 mb-12">
+                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 transform hover:scale-105 transition-transform">
+                  <Banknote className="w-10 h-10 text-green-600 mb-4 mx-auto" />
+                  <h3 className="text-lg font-semibold mb-2">Crypto Transfers</h3>
+                  <p className="text-gray-600">Send tokens and NFTs directly through email</p>
+                </div>
+                
                 <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 transform hover:scale-105 transition-transform">
                   <Crown className="w-10 h-10 text-purple-600 mb-4 mx-auto" />
                   <h3 className="text-lg font-semibold mb-2">Premium Tiers</h3>
@@ -1078,15 +1084,9 @@ function App() {
                 </div>
                 
                 <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 transform hover:scale-105 transition-transform">
-                  <CreditCard className="w-10 h-10 text-green-600 mb-4 mx-auto" />
+                  <CreditCard className="w-10 h-10 text-orange-600 mb-4 mx-auto" />
                   <h3 className="text-lg font-semibold mb-2">Stripe Payments</h3>
-                  <p className="text-gray-600">Secure credit card and subscription payments</p>
-                </div>
-                
-                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 transform hover:scale-105 transition-transform">
-                  <FileText className="w-10 h-10 text-orange-600 mb-4 mx-auto" />
-                  <h3 className="text-lg font-semibold mb-2">Smart Contracts</h3>
-                  <p className="text-gray-600">Ricardian contracts for email agreements</p>
+                  <p className="text-gray-600">Secure subscription and payment processing</p>
                 </div>
               </div>
               
