@@ -740,7 +740,7 @@ async def send_email_advanced(
         
         # Add processed attachments to email data
         email_data_dict = email_data.dict()
-        email_data["attachments"] = processed_attachments
+        email_data_dict["attachments"] = processed_attachments
         
         # Determine advanced features based on subscription
         encryption_level = tier_config.encryption_level
