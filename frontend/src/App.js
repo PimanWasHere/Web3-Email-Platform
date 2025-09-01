@@ -23,6 +23,9 @@ import {
 import axios from "axios";
 import useWeb3 from "./hooks/useWeb3";
 import CryptoTransferModal from "./components/CryptoTransferModal";
+import AIAssistant from "./components/AIAssistant";
+import MultiChainDashboard from "./components/MultiChainDashboard";
+import AnalyticsDashboard from "./components/AnalyticsDashboard";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
