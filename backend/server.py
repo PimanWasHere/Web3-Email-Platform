@@ -26,6 +26,11 @@ from cryptography.fernet import Fernet
 # Web3 Integration
 from web3_service import web3_service
 
+# Advanced Services
+from ai_service import ai_assistant
+from multi_chain_service import multi_chain_service
+from analytics_service import AdvancedAnalyticsService
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
