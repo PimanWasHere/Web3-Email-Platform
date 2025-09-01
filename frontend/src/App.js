@@ -211,7 +211,7 @@ const useAuth = (wallet) => {
   };
 };
 
-// Advanced Email Composer
+// Advanced Email Composer with Crypto Transfer
 const AdvancedEmailComposer = ({ userProfile, onEmailSent }) => {
   const [emailData, setEmailData] = useState({
     from_address: '',
@@ -227,6 +227,9 @@ const AdvancedEmailComposer = ({ userProfile, onEmailSent }) => {
     deliveryGuarantee: false,
     encryptionLevel: 'standard'
   });
+  const [showCryptoModal, setShowCryptoModal] = useState(false);
+  const [includeCrypto, setIncludeCrypto] = useState(false);
+  const [cryptoTransferData, setCryptoTransferData] = useState(null);
 
   const handleAddRecipient = () => {
     if (newRecipient && !emailData.to_addresses.includes(newRecipient)) {
