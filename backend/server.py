@@ -818,11 +818,20 @@ async def get_user_emails(
             {"user_id": current_user["user_id"]}
         ).sort("timestamp", -1).to_list(100)
         
+        # Convert email records to proper format (handle MongoDB ObjectId issues)
+        formatted_emails = []
+        for record in email_records:
+            # Convert ObjectId to string if present and remove _id field
+            if "_id" in record:
+                del record["_id"]
+            formatted_emails.append(record)
+        
         return {
-            "emails": email_records,
-            "count": len(email_records)
+            "emails": formatted_emails,
+            "count": len(formatted_emails)
         }
     except Exception as e:
+        logging.error(f"Failed to get user emails: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get user emails: {str(e)}"
