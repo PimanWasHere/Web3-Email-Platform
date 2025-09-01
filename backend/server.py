@@ -697,7 +697,7 @@ async def verify_wallet_signature(request: AuthSignRequest):
 # Advanced Email endpoints
 @api_router.post("/emails/send")
 async def send_email_advanced(
-    request: EmailTimestampRequest,
+    email_data: EmailData,
     attachments: List[UploadFile] = File(None),
     current_user: Dict[str, Any] = Depends(get_current_user)
 ):
@@ -739,7 +739,7 @@ async def send_email_advanced(
                 })
         
         # Add processed attachments to email data
-        email_data = request.email_data.dict()
+        email_data_dict = email_data.dict()
         email_data["attachments"] = processed_attachments
         
         # Determine advanced features based on subscription
