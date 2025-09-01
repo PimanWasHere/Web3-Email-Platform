@@ -17,7 +17,15 @@ class Web3EmailAPITester:
         self.email_id = None
         self.test_results = []
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, headers=None):
+    def log_test_result(self, name, success, details=""):
+        """Log test result for summary"""
+        self.test_results.append({
+            "name": name,
+            "success": success,
+            "details": details
+        })
+
+    def run_test(self, name, method, endpoint, expected_status, data=None, headers=None, files=None):
         """Run a single API test"""
         url = f"{self.api_url}/{endpoint}" if not endpoint.startswith('http') else endpoint
         test_headers = {'Content-Type': 'application/json'}
@@ -32,13 +40,19 @@ class Web3EmailAPITester:
         
         try:
             if method == 'GET':
-                response = requests.get(url, headers=test_headers, timeout=10)
+                response = requests.get(url, headers=test_headers, timeout=30)
             elif method == 'POST':
-                response = requests.post(url, json=data, headers=test_headers, timeout=10)
+                if files:
+                    # Remove Content-Type for multipart
+                    if 'Content-Type' in test_headers:
+                        del test_headers['Content-Type']
+                    response = requests.post(url, data=data, files=files, headers=test_headers, timeout=30)
+                else:
+                    response = requests.post(url, json=data, headers=test_headers, timeout=30)
             elif method == 'PUT':
-                response = requests.put(url, json=data, headers=test_headers, timeout=10)
+                response = requests.put(url, json=data, headers=test_headers, timeout=30)
             elif method == 'DELETE':
-                response = requests.delete(url, headers=test_headers, timeout=10)
+                response = requests.delete(url, headers=test_headers, timeout=30)
 
             success = response.status_code == expected_status
             if success:
@@ -47,20 +61,25 @@ class Web3EmailAPITester:
                 try:
                     response_data = response.json()
                     print(f"   Response: {json.dumps(response_data, indent=2)[:200]}...")
+                    self.log_test_result(name, True)
                     return True, response_data
                 except:
+                    self.log_test_result(name, True)
                     return True, {}
             else:
                 print(f"❌ Failed - Expected {expected_status}, got {response.status_code}")
                 try:
                     error_data = response.json()
                     print(f"   Error: {error_data}")
+                    self.log_test_result(name, False, f"Status {response.status_code}: {error_data}")
                 except:
                     print(f"   Error: {response.text}")
+                    self.log_test_result(name, False, f"Status {response.status_code}: {response.text[:100]}")
                 return False, {}
 
         except Exception as e:
             print(f"❌ Failed - Error: {str(e)}")
+            self.log_test_result(name, False, f"Exception: {str(e)}")
             return False, {}
 
     def test_health_check(self):
