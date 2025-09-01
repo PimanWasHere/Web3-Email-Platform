@@ -23,6 +23,9 @@ from emergentintegrations.payments.stripe.checkout import StripeCheckout, Checko
 import ipfshttpclient
 from cryptography.fernet import Fernet
 
+# Web3 Integration
+from web3_service import web3_service
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
