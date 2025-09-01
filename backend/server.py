@@ -441,8 +441,15 @@ class AdvancedEmailService:
 # Payment Service
 class PaymentService:
     def __init__(self):
+        self.stripe_checkout = None
         if STRIPE_API_KEY:
-            self.stripe_checkout = None
+            try:
+                from emergentintegrations.payments.stripe.checkout import StripeCheckout
+                # Initialize with default webhook URL - will be updated per request
+                self.stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY)
+            except Exception as e:
+                logging.warning(f"Failed to initialize Stripe checkout: {e}")
+                self.stripe_checkout = None
     
     async def initialize_stripe(self, request: Request):
         """Initialize Stripe checkout with dynamic webhook URL"""
