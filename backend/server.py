@@ -1042,8 +1042,303 @@ async def stripe_webhook(request: Request):
         logging.error(f"Stripe webhook error: {e}")
         raise HTTPException(status_code=400, detail="Webhook processing failed")
 
-@api_router.get("/user/profile")
-async def get_user_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
+@api_router.get("/web3/health")
+async def web3_health_check():
+    """Check Web3 connection status"""
+    try:
+        connected = web3_service.is_connected()
+        if connected:
+            gas_info = await web3_service.estimate_gas_price()
+            return {
+                "connected": True,
+                "network": "ethereum_mainnet",
+                "gas_info": gas_info
+            }
+        else:
+            return {
+                "connected": False,
+                "error": "Web3 provider not connected"
+            }
+    except Exception as e:
+        return {
+            "connected": False,
+            "error": str(e)
+        }
+
+@api_router.get("/web3/balances/{address}")
+async def get_wallet_balances(
+    address: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get token and ETH balances for wallet address"""
+    try:
+        if not web3_service.is_valid_address(address):
+            raise HTTPException(status_code=400, detail="Invalid Ethereum address")
+        
+        balances = await web3_service.get_popular_token_balances(address)
+        
+        return {
+            "address": address,
+            "balances": balances,
+            "count": len(balances)
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get wallet balances: {str(e)}"
+        )
+
+@api_router.get("/web3/token/{token_address}/balance/{wallet_address}")
+async def get_specific_token_balance(
+    token_address: str,
+    wallet_address: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get balance for specific token"""
+    try:
+        token_info = await web3_service.get_token_balance(wallet_address, token_address)
+        
+        if "error" in token_info:
+            raise HTTPException(status_code=400, detail=token_info["error"])
+        
+        return token_info
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get token balance: {str(e)}"
+        )
+
+@api_router.get("/web3/nft/{contract_address}/balance/{wallet_address}")
+async def get_nft_balance(
+    contract_address: str,
+    wallet_address: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get NFT balance for specific contract"""
+    try:
+        nft_info = await web3_service.get_nft_balance(wallet_address, contract_address)
+        
+        if "error" in nft_info:
+            raise HTTPException(status_code=400, detail=nft_info["error"])
+        
+        return nft_info
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get NFT balance: {str(e)}"
+        )
+
+@api_router.get("/web3/nft/{contract_address}/{token_id}/metadata")
+async def get_nft_metadata(
+    contract_address: str,
+    token_id: int,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get NFT metadata"""
+    try:
+        metadata = await web3_service.get_nft_metadata(contract_address, token_id)
+        
+        if "error" in metadata:
+            raise HTTPException(status_code=400, detail=metadata["error"])
+        
+        return metadata
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get NFT metadata: {str(e)}"
+        )
+
+@api_router.post("/web3/validate-transfer")
+async def validate_transfer_params(
+    request: TokenTransferRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Validate transfer parameters before frontend execution"""
+    try:
+        validation = await web3_service.validate_transfer_params(
+            from_address=request.from_address,
+            to_address=request.to_address,
+            token_address=request.token_address
+        )
+        
+        if not validation["valid"]:
+            raise HTTPException(status_code=400, detail=validation["error"])
+        
+        # Get gas estimates
+        gas_info = await web3_service.estimate_gas_price()
+        validation["gas_estimates"] = gas_info
+        
+        return validation
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to validate transfer: {str(e)}"
+        )
+
+@api_router.post("/web3/transaction/record")
+async def record_crypto_transaction(
+    transaction_hash: str,
+    transfer_request: TokenTransferRequest,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Record crypto transaction in database"""
+    try:
+        # Determine transaction type
+        if transfer_request.token_address is None:
+            tx_type = "eth_transfer"
+        elif transfer_request.token_type == "ERC721":
+            tx_type = "nft_transfer"
+        else:
+            tx_type = "token_transfer"
+        
+        # Create transaction record
+        crypto_tx = CryptoTransaction(
+            user_id=current_user["user_id"],
+            transaction_hash=transaction_hash,
+            from_address=transfer_request.from_address,
+            to_address=transfer_request.to_address,
+            token_address=transfer_request.token_address,
+            amount=transfer_request.amount,
+            transaction_type=tx_type,
+            metadata={
+                "token_type": transfer_request.token_type,
+                "initiated_at": datetime.utcnow().isoformat()
+            }
+        )
+        
+        # Store in database
+        await db.crypto_transactions.insert_one(crypto_tx.dict())
+        
+        return {
+            "success": True,
+            "transaction_id": crypto_tx.id,
+            "hash": transaction_hash,
+            "status": "recorded"
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to record transaction: {str(e)}"
+        )
+
+@api_router.get("/web3/transaction/{tx_hash}/status")
+async def get_transaction_status(
+    tx_hash: str,
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get blockchain transaction status"""
+    try:
+        status_info = await web3_service.get_transaction_status(tx_hash)
+        
+        # Update database record if transaction is confirmed
+        if status_info.get("confirmed") and status_info.get("status") in ["success", "failed"]:
+            await db.crypto_transactions.update_one(
+                {"transaction_hash": tx_hash, "user_id": current_user["user_id"]},
+                {
+                    "$set": {
+                        "status": "confirmed" if status_info["status"] == "success" else "failed",
+                        "confirmed_at": datetime.utcnow(),
+                        "metadata.block_number": status_info.get("block_number"),
+                        "metadata.gas_used": status_info.get("gas_used")
+                    }
+                }
+            )
+        
+        return status_info
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get transaction status: {str(e)}"
+        )
+
+@api_router.post("/emails/send-with-crypto")
+async def send_email_with_crypto(
+    request: CryptoEmailRequest,
+    attachments: List[UploadFile] = File(None),
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Send email with crypto transfer notification"""
+    try:
+        # First send the email using existing logic
+        email_result = await send_email_advanced(request.email_data, attachments, current_user)
+        
+        # If crypto transfer is included, record the intention
+        if request.include_transfer and request.crypto_transfer:
+            crypto_tx = CryptoTransaction(
+                user_id=current_user["user_id"],
+                from_address=request.crypto_transfer.get("from_address"),
+                to_address=request.crypto_transfer.get("to_address"),
+                token_address=request.crypto_transfer.get("token_address"),
+                amount=request.crypto_transfer.get("amount"),
+                token_id=request.crypto_transfer.get("token_id"),
+                transaction_type=request.crypto_transfer.get("transaction_type", "token_transfer"),
+                status="email_sent",
+                email_id=email_result["email_id"],
+                metadata={
+                    "email_subject": request.email_data.subject,
+                    "email_sent_at": datetime.utcnow().isoformat(),
+                    "crypto_details": request.crypto_transfer
+                }
+            )
+            
+            await db.crypto_transactions.insert_one(crypto_tx.dict())
+            
+            email_result["crypto_transfer"] = {
+                "recorded": True,
+                "transaction_id": crypto_tx.id,
+                "status": "pending_user_confirmation"
+            }
+        
+        return email_result
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to send email with crypto: {str(e)}"
+        )
+
+@api_router.get("/web3/transactions/user")
+async def get_user_crypto_transactions(
+    current_user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Get user's crypto transaction history"""
+    try:
+        transactions = await db.crypto_transactions.find(
+            {"user_id": current_user["user_id"]}
+        ).sort("created_at", -1).to_list(100)
+        
+        # Format transactions (handle MongoDB ObjectId issues)
+        formatted_transactions = []
+        for tx in transactions:
+            if "_id" in tx:
+                del tx["_id"]
+            formatted_transactions.append(tx)
+        
+        return {
+            "transactions": formatted_transactions,
+            "count": len(formatted_transactions)
+        }
+        
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get crypto transactions: {str(e)}"
+        )
     """Get user profile and subscription info"""
     try:
         user_doc = await db.users.find_one({"id": current_user["user_id"]})
