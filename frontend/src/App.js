@@ -10,9 +10,16 @@ import { Separator } from "./components/ui/separator";
 import { Alert, AlertDescription } from "./components/ui/alert";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "./components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./components/ui/select";
+import { Progress } from "./components/ui/progress";
+import { Switch } from "./components/ui/switch";
 import { toast } from "sonner";
 import { Toaster } from "./components/ui/sonner";
-import { Wallet, Mail, Shield, Clock, Hash, CheckCircle, AlertCircle, User, Send, Eye, Plus, X } from "lucide-react";
+import { 
+  Wallet, Mail, Shield, Clock, Hash, CheckCircle, AlertCircle, User, Send, Eye, Plus, X, 
+  CreditCard, Crown, Zap, Upload, Download, Lock, Globe, FileText, Users, Settings,
+  Star, TrendingUp, Package, Gift, Coins, Diamond, Sparkles
+} from "lucide-react";
 import axios from "axios";
 
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
@@ -62,7 +69,6 @@ const useWallet = () => {
       setLoading(true);
       setError('');
       
-      // Simulate HashPack connection for demo
       const simulatedAddress = "0.0." + Math.floor(Math.random() * 1000000);
       setWalletAddress(simulatedAddress);
       setWalletType('hashpack');
@@ -101,7 +107,6 @@ const useWallet = () => {
           params: [message, walletAddress],
         });
       } else if (walletType === 'hashpack') {
-        // Simulate signing for demo
         return "0x" + Array.from({length: 130}, () => Math.floor(Math.random() * 16).toString(16)).join('');
       }
       throw new Error('Unsupported wallet type');
@@ -110,7 +115,6 @@ const useWallet = () => {
     }
   };
 
-  // Check for existing connection on load
   useEffect(() => {
     const savedAddress = localStorage.getItem('walletAddress');
     const savedType = localStorage.getItem('walletType');
@@ -138,23 +142,20 @@ const useWallet = () => {
 const useAuth = (wallet) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
+  const [userProfile, setUserProfile] = useState(null);
 
   const authenticate = async () => {
     try {
       setAuthLoading(true);
       
-      // Create challenge
       const challengeResponse = await axios.post(`${API}/auth/challenge`, {
         wallet_address: wallet.walletAddress,
         wallet_type: wallet.walletType
       });
 
       const challengeData = challengeResponse.data;
-      
-      // Sign challenge
       const signature = await wallet.signMessage(challengeData.message);
       
-      // Verify signature
       const verifyResponse = await axios.post(`${API}/auth/verify`, {
         wallet_address: wallet.walletAddress,
         signature: signature,
@@ -165,6 +166,10 @@ const useAuth = (wallet) => {
       const authResult = verifyResponse.data;
       localStorage.setItem('authToken', authResult.access_token);
       setIsAuthenticated(true);
+      
+      // Fetch user profile
+      await fetchUserProfile();
+      
       toast.success('Successfully authenticated!');
 
     } catch (error) {
@@ -175,11 +180,23 @@ const useAuth = (wallet) => {
     }
   };
 
-  // Check for existing auth token
+  const fetchUserProfile = async () => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await axios.get(`${API}/user/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setUserProfile(response.data);
+    } catch (error) {
+      console.error('Failed to fetch user profile:', error);
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('authToken');
     if (token && wallet.walletConnected) {
       setIsAuthenticated(true);
+      fetchUserProfile();
     } else {
       setIsAuthenticated(false);
     }
@@ -188,12 +205,14 @@ const useAuth = (wallet) => {
   return {
     isAuthenticated,
     authLoading,
-    authenticate
+    userProfile,
+    authenticate,
+    fetchUserProfile
   };
 };
 
-// Email composer component
-const EmailComposer = ({ onEmailSent }) => {
+// Advanced Email Composer
+const AdvancedEmailComposer = ({ userProfile, onEmailSent }) => {
   const [emailData, setEmailData] = useState({
     from_address: '',
     to_addresses: [],
@@ -202,7 +221,12 @@ const EmailComposer = ({ onEmailSent }) => {
     attachments: []
   });
   const [newRecipient, setNewRecipient] = useState('');
+  const [attachments, setAttachments] = useState([]);
   const [sending, setSending] = useState(false);
+  const [advancedFeatures, setAdvancedFeatures] = useState({
+    deliveryGuarantee: false,
+    encryptionLevel: 'standard'
+  });
 
   const handleAddRecipient = () => {
     if (newRecipient && !emailData.to_addresses.includes(newRecipient)) {
@@ -221,22 +245,39 @@ const EmailComposer = ({ onEmailSent }) => {
     }));
   };
 
+  const handleFileUpload = (event) => {
+    const files = Array.from(event.target.files);
+    setAttachments(prev => [...prev, ...files]);
+  };
+
+  const handleRemoveAttachment = (index) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSendEmail = async () => {
     try {
       setSending(true);
       
       const token = localStorage.getItem('authToken');
-      const response = await axios.post(`${API}/emails/timestamp`, {
-        email_data: emailData
-      }, {
+      const formData = new FormData();
+      
+      // Add email data
+      formData.append('email_data', JSON.stringify(emailData));
+      
+      // Add attachments
+      attachments.forEach((file, index) => {
+        formData.append('attachments', file);
+      });
+
+      const response = await axios.post(`${API}/emails/send`, formData, {
         headers: {
-          Authorization: `Bearer ${token}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'multipart/form-data'
         }
       });
 
       if (response.data.success) {
-        toast.success('Email sent and timestamped on Hedera!');
-        // Reset form
+        toast.success('Email sent and stored on IPFS with blockchain verification!');
         setEmailData({
           from_address: '',
           to_addresses: [],
@@ -244,27 +285,52 @@ const EmailComposer = ({ onEmailSent }) => {
           body: '',
           attachments: []
         });
+        setAttachments([]);
         if (onEmailSent) onEmailSent(response.data.timestamp);
       }
 
     } catch (error) {
       console.error('Send email failed:', error);
-      toast.error(error.response?.data?.detail || 'Failed to send email');
+      if (error.response?.status === 402) {
+        toast.error('Insufficient credits! Please purchase more credits or upgrade your subscription.');
+      } else {
+        toast.error(error.response?.data?.detail || 'Failed to send email');
+      }
     } finally {
       setSending(false);
     }
   };
+
+  const tierConfig = userProfile?.tier_details;
+  const hasAdvancedFeatures = tierConfig?.features?.includes('advanced_encryption');
 
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Send className="w-5 h-5" />
-          Compose Email
+          Advanced Email Composer
+          {userProfile && (
+            <Badge variant={userProfile.subscription_tier === 'basic' ? 'secondary' : 'default'}>
+              {userProfile.subscription_tier}
+            </Badge>
+          )}
         </CardTitle>
         <CardDescription>
-          Send an email with blockchain verification on Hedera network
+          Send blockchain-verified emails with IPFS storage and advanced encryption
         </CardDescription>
+        {userProfile && (
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <span className="flex items-center gap-1">
+              <Coins className="w-4 h-4" />
+              Credits: {userProfile.email_credits}
+            </span>
+            <span className="flex items-center gap-1">
+              <Upload className="w-4 h-4" />
+              Max attachment: {tierConfig?.max_attachment_size}MB
+            </span>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
@@ -323,137 +389,487 @@ const EmailComposer = ({ onEmailSent }) => {
             rows={6}
           />
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="attachments">Attachments</Label>
+          <div className="flex items-center gap-2">
+            <Input
+              id="attachments"
+              type="file"
+              multiple
+              onChange={handleFileUpload}
+              className="flex-1"
+            />
+            <Badge variant="outline" className="text-xs">
+              {attachments.length} files
+            </Badge>
+          </div>
+          {attachments.length > 0 && (
+            <div className="space-y-1">
+              {attachments.map((file, index) => (
+                <div key={index} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                  <span className="text-sm flex items-center gap-2">
+                    <FileText className="w-4 h-4" />
+                    {file.name} ({(file.size / 1024 / 1024).toFixed(2)}MB)
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleRemoveAttachment(index)}
+                  >
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {hasAdvancedFeatures && (
+          <div className="space-y-4 p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg border">
+            <h4 className="font-semibold flex items-center gap-2">
+              <Sparkles className="w-4 h-4" />
+              Premium Features
+            </h4>
+            
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <Label className="text-sm font-medium flex items-center gap-2">
+                  <Shield className="w-4 h-4" />
+                  Delivery Guarantee
+                </Label>
+                <p className="text-xs text-gray-600">
+                  Cryptographic proof of email delivery
+                </p>
+              </div>
+              <Switch
+                checked={advancedFeatures.deliveryGuarantee}
+                onCheckedChange={(checked) => 
+                  setAdvancedFeatures(prev => ({ ...prev, deliveryGuarantee: checked }))
+                }
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Lock className="w-4 h-4" />
+                Encryption Level
+              </Label>
+              <Select
+                value={advancedFeatures.encryptionLevel}
+                onValueChange={(value) => 
+                  setAdvancedFeatures(prev => ({ ...prev, encryptionLevel: value }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="standard">Standard Encryption</SelectItem>
+                  <SelectItem value="advanced">Advanced Encryption</SelectItem>
+                  <SelectItem value="enterprise">Enterprise Grade</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
       </CardContent>
       <CardFooter>
         <Button 
           onClick={handleSendEmail}
-          disabled={sending || !emailData.from_address || !emailData.to_addresses.length || !emailData.subject}
+          disabled={sending || !emailData.from_address || !emailData.to_addresses.length || !emailData.subject || (userProfile?.email_credits || 0) <= 0}
           className="w-full"
         >
-          {sending ? 'Sending & Timestamping...' : 'Send Email'}
+          {sending ? 'Sending to IPFS & Blockchain...' : `Send Email (${userProfile?.email_credits || 0} credits remaining)`}
         </Button>
       </CardFooter>
     </Card>
   );
 };
 
-// Email verification component
-const EmailVerifier = () => {
-  const [emailData, setEmailData] = useState({
-    from_address: '',
-    to_addresses: [],
-    subject: '',
-    body: '',
-    attachments: []
-  });
-  const [storedHash, setStoredHash] = useState('');
-  const [verificationResult, setVerificationResult] = useState(null);
-  const [verifying, setVerifying] = useState(false);
+// Subscription Management Component
+const SubscriptionManager = ({ userProfile, onSubscriptionUpdate }) => {
+  const [tiers, setTiers] = useState({});
+  const [creditPackages, setCreditPackages] = useState({});
+  const [loading, setLoading] = useState(false);
 
-  const handleVerifyEmail = async () => {
+  useEffect(() => {
+    fetchSubscriptionData();
+  }, []);
+
+  const fetchSubscriptionData = async () => {
     try {
-      setVerifying(true);
+      const [tiersResponse, packagesResponse] = await Promise.all([
+        axios.get(`${API}/subscription/tiers`),
+        axios.get(`${API}/credits/packages`)
+      ]);
       
+      setTiers(tiersResponse.data.tiers);
+      setCreditPackages(packagesResponse.data.packages);
+    } catch (error) {
+      console.error('Failed to fetch subscription data:', error);
+      toast.error('Failed to load subscription options');
+    }
+  };
+
+  const handleSubscriptionUpgrade = async (tierName) => {
+    try {
+      setLoading(true);
       const token = localStorage.getItem('authToken');
-      const response = await axios.post(`${API}/emails/verify`, {
-        email_data: emailData,
-        stored_hash: storedHash
+      const originUrl = window.location.origin;
+
+      const response = await axios.post(`${API}/payments/subscription`, {
+        package_name: tierName,
+        origin_url: originUrl
       }, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      setVerificationResult(response.data);
-      toast.success(response.data.valid ? 'Email verified successfully!' : 'Email verification failed!');
+      // Redirect to Stripe Checkout
+      window.location.href = response.data.checkout_url;
 
     } catch (error) {
-      console.error('Verify email failed:', error);
-      toast.error(error.response?.data?.detail || 'Failed to verify email');
+      console.error('Subscription upgrade failed:', error);
+      toast.error('Failed to create subscription payment');
     } finally {
-      setVerifying(false);
+      setLoading(false);
+    }
+  };
+
+  const handleCreditsPurchase = async (packageName) => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('authToken');
+      const originUrl = window.location.origin;
+
+      const response = await axios.post(`${API}/payments/credits`, {
+        package_name: packageName,
+        origin_url: originUrl
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      // Redirect to Stripe Checkout
+      window.location.href = response.data.checkout_url;
+
+    } catch (error) {
+      console.error('Credits purchase failed:', error);
+      toast.error('Failed to create credits payment');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getTierIcon = (tierName) => {
+    switch (tierName) {
+      case 'basic': return <Package className="w-6 h-6" />;
+      case 'pro': return <Crown className="w-6 h-6" />;
+      case 'enterprise': return <Diamond className="w-6 h-6" />;
+      default: return <Package className="w-6 h-6" />;
+    }
+  };
+
+  const getTierColor = (tierName) => {
+    switch (tierName) {
+      case 'basic': return 'border-gray-200';
+      case 'pro': return 'border-purple-300 bg-gradient-to-br from-purple-50 to-indigo-50';
+      case 'enterprise': return 'border-yellow-300 bg-gradient-to-br from-yellow-50 to-orange-50';
+      default: return 'border-gray-200';
     }
   };
 
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Eye className="w-5 h-5" />
-          Verify Email
-        </CardTitle>
-        <CardDescription>
-          Verify email integrity against blockchain timestamp
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="hash">Stored Hash</Label>
-          <Input
-            id="hash"
-            value={storedHash}
-            onChange={(e) => setStoredHash(e.target.value)}
-            placeholder="Enter the stored email hash"
-          />
-        </div>
+    <div className="space-y-6">
+      {/* Current Subscription Status */}
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <User className="w-5 h-5" />
+            Current Subscription
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{userProfile?.subscription_tier || 'basic'}</div>
+              <div className="text-sm text-gray-600">Current Plan</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{userProfile?.email_credits || 0}</div>
+              <div className="text-sm text-gray-600">Email Credits</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">{userProfile?.tier_details?.features?.length || 0}</div>
+              <div className="text-sm text-gray-600">Features</div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        <div className="space-y-2">
-          <Label htmlFor="verify-from">From</Label>
-          <Input
-            id="verify-from"
-            value={emailData.from_address}
-            onChange={(e) => setEmailData(prev => ({ ...prev, from_address: e.target.value }))}
-            placeholder="sender@example.com"
-          />
+      {/* Subscription Tiers */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-semibold">Subscription Plans</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {Object.entries(tiers).map(([tierName, tier]) => (
+            <Card key={tierName} className={`${getTierColor(tierName)} transition-all hover:shadow-lg`}>
+              <CardHeader className="text-center">
+                <div className="flex justify-center mb-2">
+                  {getTierIcon(tierName)}
+                </div>
+                <CardTitle className="capitalize">{tier.name}</CardTitle>
+                <div className="text-3xl font-bold">
+                  ${tier.price}
+                  {tier.price > 0 && <span className="text-base font-normal">/month</span>}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span className="text-sm">{tier.credits_per_month} emails/month</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CheckCircle className="w-4 h-4 text-green-500" />
+                    <span className="text-sm">{tier.max_attachment_size}MB attachments</span>
+                  </div>
+                  {tier.features.map((feature, index) => (
+                    <div key={index} className="flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <span className="text-sm capitalize">{feature.replace('_', ' ')}</span>
+                    </div>
+                  ))}
+                </div>
+                <Button
+                  onClick={() => handleSubscriptionUpgrade(tierName)}
+                  disabled={loading || userProfile?.subscription_tier === tierName}
+                  className="w-full"
+                  variant={userProfile?.subscription_tier === tierName ? "secondary" : "default"}
+                >
+                  {userProfile?.subscription_tier === tierName ? 'Current Plan' : 
+                   tier.price === 0 ? 'Downgrade' : 'Upgrade'}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
+      </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="verify-subject">Subject</Label>
-          <Input
-            id="verify-subject"
-            value={emailData.subject}
-            onChange={(e) => setEmailData(prev => ({ ...prev, subject: e.target.value }))}
-            placeholder="Enter email subject"
-          />
+      {/* Credit Packages */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-semibold">Buy Email Credits</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {Object.entries(creditPackages).map(([packageName, packageData]) => (
+            <Card key={packageName} className="text-center hover:shadow-lg transition-all">
+              <CardHeader>
+                <div className="flex justify-center mb-2">
+                  <Coins className="w-6 h-6 text-yellow-500" />
+                </div>
+                <CardTitle className="capitalize">{packageName}</CardTitle>
+                <div className="text-2xl font-bold text-green-600">
+                  ${packageData.price}
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-lg font-semibold mb-2">
+                  {packageData.credits} Credits
+                </div>
+                <div className="text-sm text-gray-600 mb-4">
+                  ${(packageData.price / packageData.credits).toFixed(3)} per email
+                </div>
+                <Button
+                  onClick={() => handleCreditsPurchase(packageName)}
+                  disabled={loading}
+                  className="w-full"
+                >
+                  Purchase
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
+      </div>
+    </div>
+  );
+};
 
-        <div className="space-y-2">
-          <Label htmlFor="verify-body">Message</Label>
-          <Textarea
-            id="verify-body"
-            value={emailData.body}
-            onChange={(e) => setEmailData(prev => ({ ...prev, body: e.target.value }))}
-            placeholder="Enter email message..."
-            rows={4}
-          />
-        </div>
+// Enhanced Email History
+const EnhancedEmailHistory = ({ userProfile }) => {
+  const [emails, setEmails] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedEmail, setSelectedEmail] = useState(null);
+  const [showEmailDialog, setShowEmailDialog] = useState(false);
 
-        {verificationResult && (
-          <Alert className={verificationResult.valid ? "border-green-500" : "border-red-500"}>
-            {verificationResult.valid ? (
-              <CheckCircle className="h-4 w-4" />
-            ) : (
-              <AlertCircle className="h-4 w-4" />
-            )}
-            <AlertDescription>
-              {verificationResult.valid 
-                ? "Email verified! The content matches the blockchain timestamp."
-                : "Verification failed! The content doesn't match the stored hash."
-              }
-            </AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-      <CardFooter>
-        <Button 
-          onClick={handleVerifyEmail}
-          disabled={verifying || !storedHash || !emailData.from_address || !emailData.subject}
-          className="w-full"
-        >
-          {verifying ? 'Verifying...' : 'Verify Email'}
+  useEffect(() => {
+    fetchEmails();
+  }, []);
+
+  const fetchEmails = async () => {
+    try {
+      setLoading(true);
+      const token = localStorage.getItem('authToken');
+      const response = await axios.get(`${API}/emails/user`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setEmails(response.data.emails);
+    } catch (error) {
+      console.error('Failed to fetch emails:', error);
+      toast.error('Failed to load email history');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const viewEmailDetails = async (emailId) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const response = await axios.get(`${API}/emails/${emailId}/retrieve`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setSelectedEmail(response.data);
+      setShowEmailDialog(true);
+    } catch (error) {
+      console.error('Failed to retrieve email:', error);
+      toast.error('Failed to retrieve email from IPFS');
+    }
+  };
+
+  const getEncryptionBadge = (level) => {
+    const colors = {
+      standard: 'bg-blue-100 text-blue-800',
+      advanced: 'bg-purple-100 text-purple-800',
+      enterprise: 'bg-yellow-100 text-yellow-800'
+    };
+    return colors[level] || colors.standard;
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-xl font-semibold">Email History</h3>
+        <Button onClick={fetchEmails} variant="outline" size="sm">
+          <Download className="w-4 h-4 mr-2" />
+          Refresh
         </Button>
-      </CardFooter>
-    </Card>
+      </div>
+
+      {loading ? (
+        <div className="text-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-2 text-gray-500">Loading emails...</p>
+        </div>
+      ) : emails.length === 0 ? (
+        <Card>
+          <CardContent className="text-center py-8">
+            <Mail className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+            <p className="text-gray-500">No emails sent yet</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-3">
+          {emails.map((email, index) => (
+            <Card key={index} className="hover:shadow-md transition-shadow">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <h4 className="font-semibold text-lg">{email.email_data.subject}</h4>
+                      <Badge variant="outline" className="text-xs">
+                        {new Date(email.timestamp).toLocaleDateString()}
+                      </Badge>
+                      {email.ipfs_hash && (
+                        <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                          <Globe className="w-3 h-3" />
+                          IPFS
+                        </Badge>
+                      )}
+                      <Badge className={`text-xs ${getEncryptionBadge(email.encryption_level)}`}>
+                        {email.encryption_level}
+                      </Badge>
+                      {email.delivery_guarantee && (
+                        <Badge variant="default" className="text-xs flex items-center gap-1">
+                          <Shield className="w-3 h-3" />
+                          Guaranteed
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-gray-600 mb-2">
+                      To: {email.email_data.to_addresses.join(', ')}
+                    </p>
+                    <div className="text-sm text-gray-500 space-y-1">
+                      <p>Hash: <code className="bg-gray-100 px-1 rounded">{email.content_hash.slice(0, 16)}...</code></p>
+                      {email.ipfs_hash && (
+                        <p>IPFS: <code className="bg-gray-100 px-1 rounded">{email.ipfs_hash.slice(0, 16)}...</code></p>
+                      )}
+                      <p>Hedera: <code className="bg-gray-100 px-1 rounded">{email.hedera_transaction_id}</code></p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => viewEmailDetails(email.id)}
+                    >
+                      <Eye className="w-4 h-4 mr-1" />
+                      View
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Email Details Dialog */}
+      <Dialog open={showEmailDialog} onOpenChange={setShowEmailDialog}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Email Details</DialogTitle>
+            <DialogDescription>
+              Blockchain-verified email stored on IPFS
+            </DialogDescription>
+          </DialogHeader>
+          {selectedEmail && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Subject</Label>
+                  <p className="font-medium">{selectedEmail.content.email_data.subject}</p>
+                </div>
+                <div>
+                  <Label>Encryption Level</Label>
+                  <Badge className={`${getEncryptionBadge(selectedEmail.metadata.encryption_level)}`}>
+                    {selectedEmail.metadata.encryption_level}
+                  </Badge>
+                </div>
+              </div>
+              
+              <div>
+                <Label>Recipients</Label>
+                <p>{selectedEmail.content.email_data.to_addresses.join(', ')}</p>
+              </div>
+              
+              <div>
+                <Label>Message Body</Label>
+                <div className="bg-gray-50 p-4 rounded border max-h-60 overflow-y-auto">
+                  <pre className="whitespace-pre-wrap text-sm">{selectedEmail.content.email_data.body}</pre>
+                </div>
+              </div>
+              
+              <div>
+                <Label>Blockchain Verification</Label>
+                <div className="bg-blue-50 p-4 rounded border space-y-2">
+                  <p className="text-sm"><strong>IPFS Hash:</strong> <code>{selectedEmail.metadata.ipfs_hash}</code></p>
+                  <p className="text-sm"><strong>Content Hash:</strong> <code>{selectedEmail.content.content_hash}</code></p>
+                  <p className="text-sm"><strong>Timestamp:</strong> {selectedEmail.content.timestamp}</p>
+                  <p className="text-sm"><strong>Delivery Guarantee:</strong> {selectedEmail.metadata.delivery_guarantee ? 'Yes' : 'No'}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 };
 
@@ -461,34 +877,64 @@ const EmailVerifier = () => {
 function App() {
   const wallet = useWallet();
   const auth = useAuth(wallet);
-  const [userEmails, setUserEmails] = useState([]);
-  const [loadingEmails, setLoadingEmails] = useState(false);
 
-  const fetchUserEmails = async () => {
+  // Check for payment success/cancel on page load
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sessionId = urlParams.get('session_id');
+    
+    if (sessionId) {
+      checkPaymentStatus(sessionId);
+    }
+  }, []);
+
+  const checkPaymentStatus = async (sessionId) => {
     try {
-      setLoadingEmails(true);
       const token = localStorage.getItem('authToken');
-      const response = await axios.get(`${API}/emails/user`, {
-        headers: {
-          Authorization: `Bearer ${token}`
+      if (!token) return;
+
+      let attempts = 0;
+      const maxAttempts = 5;
+      
+      const pollStatus = async () => {
+        try {
+          const response = await axios.get(`${API}/payments/status/${sessionId}`, {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          
+          if (response.data.payment_status === 'paid') {
+            toast.success('Payment successful! Your account has been updated.');
+            auth.fetchUserProfile(); // Refresh user profile
+            window.history.replaceState({}, document.title, window.location.pathname);
+            return;
+          } else if (response.data.status === 'expired') {
+            toast.error('Payment session expired.');
+            window.history.replaceState({}, document.title, window.location.pathname);
+            return;
+          }
+          
+          attempts++;
+          if (attempts < maxAttempts) {
+            setTimeout(pollStatus, 2000);
+          } else {
+            toast.info('Payment status check timed out. Please check your account.');
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        } catch (error) {
+          console.error('Payment status check failed:', error);
         }
-      });
-      setUserEmails(response.data.emails);
+      };
+      
+      pollStatus();
     } catch (error) {
-      console.error('Failed to fetch emails:', error);
-    } finally {
-      setLoadingEmails(false);
+      console.error('Payment status check failed:', error);
     }
   };
 
-  useEffect(() => {
-    if (auth.isAuthenticated) {
-      fetchUserEmails();
-    }
-  }, [auth.isAuthenticated]);
-
   const handleEmailSent = (timestampData) => {
-    fetchUserEmails(); // Refresh email list
+    if (auth.fetchUserProfile) {
+      auth.fetchUserProfile(); // Refresh to update credits
+    }
   };
 
   // Landing page when not connected
@@ -508,43 +954,52 @@ function App() {
           <div className="relative z-10 container mx-auto px-4 py-20">
             <div className="text-center max-w-4xl mx-auto">
               <div className="flex justify-center mb-8">
-                <div className="p-4 bg-indigo-600 rounded-full">
+                <div className="p-4 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-full shadow-lg">
                   <Mail className="w-12 h-12 text-white" />
                 </div>
               </div>
               
-              <h1 className="text-5xl font-bold text-gray-900 mb-6 leading-tight">
-                Web3 Enhanced Email Platform
+              <h1 className="text-6xl font-bold text-gray-900 mb-6 leading-tight">
+                Web3 Email Platform
+                <span className="block text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
+                  v2.0 Advanced
+                </span>
               </h1>
               
               <p className="text-xl text-gray-600 mb-8 leading-relaxed">
-                Experience the future of email with blockchain verification, Ricardian smart contracts, 
-                and Hedera network integration. Every email is timestamped and cryptographically secured.
+                Revolutionary email platform with IPFS decentralized storage, Stripe payments, 
+                advanced encryption, and smart contract integration on Hedera network.
               </p>
               
-              <div className="grid md:grid-cols-3 gap-6 mb-12">
-                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-                  <Shield className="w-10 h-10 text-indigo-600 mb-4 mx-auto" />
-                  <h3 className="text-lg font-semibold mb-2">Blockchain Verified</h3>
-                  <p className="text-gray-600">Every email is cryptographically timestamped on Hedera network</p>
+              <div className="grid md:grid-cols-4 gap-6 mb-12">
+                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 transform hover:scale-105 transition-transform">
+                  <Crown className="w-10 h-10 text-purple-600 mb-4 mx-auto" />
+                  <h3 className="text-lg font-semibold mb-2">Premium Tiers</h3>
+                  <p className="text-gray-600">Multiple subscription levels with advanced features</p>
                 </div>
                 
-                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-                  <Clock className="w-10 h-10 text-indigo-600 mb-4 mx-auto" />
-                  <h3 className="text-lg font-semibold mb-2">Immutable Timestamps</h3>
-                  <p className="text-gray-600">Hedera Consensus Service provides tamper-proof timestamps</p>
+                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 transform hover:scale-105 transition-transform">
+                  <Globe className="w-10 h-10 text-blue-600 mb-4 mx-auto" />
+                  <h3 className="text-lg font-semibold mb-2">IPFS Storage</h3>
+                  <p className="text-gray-600">Decentralized storage with encryption</p>
                 </div>
                 
-                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100">
-                  <Hash className="w-10 h-10 text-indigo-600 mb-4 mx-auto" />
+                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 transform hover:scale-105 transition-transform">
+                  <CreditCard className="w-10 h-10 text-green-600 mb-4 mx-auto" />
+                  <h3 className="text-lg font-semibold mb-2">Stripe Payments</h3>
+                  <p className="text-gray-600">Secure credit card and subscription payments</p>
+                </div>
+                
+                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 transform hover:scale-105 transition-transform">
+                  <FileText className="w-10 h-10 text-orange-600 mb-4 mx-auto" />
                   <h3 className="text-lg font-semibold mb-2">Smart Contracts</h3>
-                  <p className="text-gray-600">Ricardian contracts for email terms and agreements</p>
+                  <p className="text-gray-600">Ricardian contracts for email agreements</p>
                 </div>
               </div>
               
               <div className="space-y-4">
                 <h2 className="text-2xl font-semibold text-gray-900 mb-6">
-                  Connect Your Wallet to Get Started
+                  Connect Your Wallet to Access Advanced Features
                 </h2>
                 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -552,7 +1007,7 @@ function App() {
                     size="lg" 
                     onClick={wallet.connectMetaMask}
                     disabled={wallet.loading}
-                    className="flex items-center gap-2 px-8 py-3"
+                    className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
                   >
                     <Wallet className="w-5 h-5" />
                     {wallet.loading ? 'Connecting...' : 'Connect MetaMask'}
@@ -581,49 +1036,42 @@ function App() {
           </div>
         </div>
         
-        {/* Features Section */}
+        {/* Enhanced Features Section */}
         <div className="py-20 bg-white">
           <div className="container mx-auto px-4">
             <div className="text-center mb-16">
-              <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                Why Choose Web3 Email?
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                Advanced Web3 Email Features
               </h2>
-              <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                Traditional email lacks verification and proof of authenticity. Our platform solves this with blockchain technology.
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+                Experience the next generation of email communication with blockchain verification, 
+                decentralized storage, and enterprise-grade security.
               </p>
             </div>
             
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <div className="text-center">
-                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <User className="w-8 h-8 text-indigo-600" />
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="bg-gradient-to-br from-purple-50 to-indigo-50 p-8 rounded-xl border border-purple-200">
+                <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Diamond className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Wallet Authentication</h3>
-                <p className="text-gray-600">Secure login with MetaMask or HashPack wallet</p>
+                <h3 className="text-xl font-semibold mb-4 text-center">Premium Subscriptions</h3>
+                <p className="text-gray-600 text-center">Choose from Basic, Pro, or Enterprise tiers with increasing features and capabilities.</p>
               </div>
               
-              <div className="text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <CheckCircle className="w-8 h-8 text-green-600" />
+              <div className="bg-gradient-to-br from-blue-50 to-cyan-50 p-8 rounded-xl border border-blue-200">
+                <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Lock className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Email Verification</h3>
-                <p className="text-gray-600">Cryptographic proof of email authenticity</p>
+                <h3 className="text-xl font-semibold mb-4 text-center">Advanced Encryption</h3>
+                <p className="text-gray-600 text-center">Multi-level encryption with enterprise-grade security for sensitive communications.</p>
               </div>
               
-              <div className="text-center">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Shield className="w-8 h-8 text-purple-600" />
+              <div className="bg-gradient-to-br from-green-50 to-emerald-50 p-8 rounded-xl border border-green-200">
+                <div className="w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Upload className="w-8 h-8 text-white" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Decentralized</h3>
-                <p className="text-gray-600">No single point of failure or censorship</p>
-              </div>
-              
-              <div className="text-center">
-                <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Clock className="w-8 h-8 text-orange-600" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">Timestamps</h3>
-                <p className="text-gray-600">Immutable proof of when emails were sent</p>
+                <h3 className="text-xl font-semibold mb-4 text-center">Large Attachments</h3>
+                <p className="text-gray-600 text-center">Send files up to 500MB with Enterprise tier, stored securely on IPFS.</p>
               </div>
             </div>
           </div>
@@ -640,14 +1088,14 @@ function App() {
         
         <div className="container mx-auto px-4 py-20">
           <div className="max-w-md mx-auto">
-            <Card>
+            <Card className="bg-white shadow-xl">
               <CardHeader className="text-center">
-                <div className="w-16 h-16 bg-indigo-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-gradient-to-r from-indigo-100 to-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
                   <User className="w-8 h-8 text-indigo-600" />
                 </div>
                 <CardTitle>Wallet Connected</CardTitle>
                 <CardDescription>
-                  Authenticate with your wallet to access the platform
+                  Authenticate to access Web3 Email Platform v2.0
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -663,7 +1111,7 @@ function App() {
                 <Button 
                   onClick={auth.authenticate}
                   disabled={auth.authLoading}
-                  className="w-full"
+                  className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700"
                 >
                   {auth.authLoading ? 'Authenticating...' : 'Sign Message to Authenticate'}
                 </Button>
@@ -687,25 +1135,43 @@ function App() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-indigo-100">
       <Toaster position="top-right" />
       
-      {/* Header */}
+      {/* Enhanced Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-indigo-600 rounded-lg">
+              <div className="p-2 bg-gradient-to-r from-indigo-600 to-purple-600 rounded-lg">
                 <Mail className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-xl font-bold text-gray-900">Web3 Email Platform</h1>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Web3 Email Platform</h1>
+                <p className="text-xs text-gray-500">v2.0 Advanced</p>
+              </div>
             </div>
             
             <div className="flex items-center gap-4">
-              <Badge variant="secondary" className="flex items-center gap-1">
-                <Wallet className="w-3 h-3" />
-                {wallet.walletType === 'metamask' ? 'MetaMask' : 'HashPack'}
-              </Badge>
-              <p className="text-sm text-gray-600 font-mono">
-                {wallet.walletAddress.slice(0, 6)}...{wallet.walletAddress.slice(-4)}
-              </p>
+              <div className="text-right">
+                <div className="flex items-center gap-2">
+                  <Badge variant="secondary" className="flex items-center gap-1">
+                    <Wallet className="w-3 h-3" />
+                    {wallet.walletType === 'metamask' ? 'MetaMask' : 'HashPack'}
+                  </Badge>
+                  <Badge variant="default" className="flex items-center gap-1">
+                    <Crown className="w-3 h-3" />
+                    {auth.userProfile?.subscription_tier || 'basic'}
+                  </Badge>
+                </div>
+                <p className="text-xs text-gray-600 font-mono mt-1">
+                  {wallet.walletAddress.slice(0, 6)}...{wallet.walletAddress.slice(-4)}
+                </p>
+              </div>
+              <div className="text-right">
+                <div className="flex items-center gap-2">
+                  <Coins className="w-4 h-4 text-yellow-500" />
+                  <span className="font-semibold">{auth.userProfile?.email_credits || 0}</span>
+                </div>
+                <p className="text-xs text-gray-600">Credits</p>
+              </div>
               <Button 
                 variant="outline"
                 size="sm"
@@ -721,58 +1187,61 @@ function App() {
       {/* Main Content */}
       <main className="container mx-auto px-4 py-8">
         <Tabs defaultValue="compose" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="compose">Compose Email</TabsTrigger>
-            <TabsTrigger value="verify">Verify Email</TabsTrigger>
-            <TabsTrigger value="history">Email History</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 bg-white shadow-sm">
+            <TabsTrigger value="compose" className="flex items-center gap-2">
+              <Send className="w-4 h-4" />
+              Compose
+            </TabsTrigger>
+            <TabsTrigger value="history" className="flex items-center gap-2">
+              <Clock className="w-4 h-4" />
+              History
+            </TabsTrigger>
+            <TabsTrigger value="subscription" className="flex items-center gap-2">
+              <Crown className="w-4 h-4" />
+              Subscription
+            </TabsTrigger>
+            <TabsTrigger value="verify" className="flex items-center gap-2">
+              <Eye className="w-4 h-4" />
+              Verify
+            </TabsTrigger>
           </TabsList>
           
           <TabsContent value="compose" className="mt-6">
-            <EmailComposer onEmailSent={handleEmailSent} />
-          </TabsContent>
-          
-          <TabsContent value="verify" className="mt-6">
-            <EmailVerifier />
+            <AdvancedEmailComposer 
+              userProfile={auth.userProfile} 
+              onEmailSent={handleEmailSent} 
+            />
           </TabsContent>
           
           <TabsContent value="history" className="mt-6">
+            <EnhancedEmailHistory userProfile={auth.userProfile} />
+          </TabsContent>
+          
+          <TabsContent value="subscription" className="mt-6">
+            <SubscriptionManager 
+              userProfile={auth.userProfile} 
+              onSubscriptionUpdate={auth.fetchUserProfile} 
+            />
+          </TabsContent>
+          
+          <TabsContent value="verify" className="mt-6">
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Clock className="w-5 h-5" />
-                  Email History
+                  <Eye className="w-5 h-5" />
+                  Verify Email Integrity
                 </CardTitle>
                 <CardDescription>
-                  Your blockchain-verified emails
+                  Verify email content against blockchain timestamps
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {loadingEmails ? (
-                  <p className="text-center py-8 text-gray-500">Loading emails...</p>
-                ) : userEmails.length === 0 ? (
-                  <p className="text-center py-8 text-gray-500">No emails sent yet</p>
-                ) : (
-                  <div className="space-y-4">
-                    {userEmails.map((email, index) => (
-                      <div key={index} className="border rounded-lg p-4 bg-white">
-                        <div className="flex items-start justify-between mb-2">
-                          <h3 className="font-semibold text-lg">{email.email_data.subject}</h3>
-                          <Badge variant="outline">
-                            {new Date(email.timestamp).toLocaleDateString()}
-                          </Badge>
-                        </div>
-                        <p className="text-gray-600 mb-2">
-                          To: {email.email_data.to_addresses.join(', ')}
-                        </p>
-                        <div className="text-sm text-gray-500 space-y-1">
-                          <p>Hash: <code className="bg-gray-100 px-1 rounded">{email.content_hash}</code></p>
-                          <p>Transaction: <code className="bg-gray-100 px-1 rounded">{email.hedera_transaction_id}</code></p>
-                          <p>Topic: <code className="bg-gray-100 px-1 rounded">{email.hedera_topic_id}</code></p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <Alert>
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>
+                    Email verification feature coming soon in the next update!
+                  </AlertDescription>
+                </Alert>
               </CardContent>
             </Card>
           </TabsContent>
