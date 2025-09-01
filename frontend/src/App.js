@@ -506,6 +506,57 @@ const AdvancedEmailComposer = ({ userProfile, onEmailSent }) => {
             </div>
           </div>
         )}
+
+        {/* Crypto Transfer Section */}
+        <div className="space-y-4 p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border">
+          <h4 className="font-semibold flex items-center gap-2">
+            <Banknote className="w-4 h-4" />
+            Crypto Transfer (New!)
+          </h4>
+          
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <Label className="text-sm font-medium flex items-center gap-2">
+                <Coins className="w-4 h-4" />
+                Include Crypto Transfer
+              </Label>
+              <p className="text-xs text-gray-600">
+                Send tokens or NFTs with your email
+              </p>
+            </div>
+            <Switch
+              checked={includeCrypto}
+              onCheckedChange={setIncludeCrypto}
+            />
+          </div>
+
+          {includeCrypto && (
+            <div className="space-y-3">
+              <Button
+                onClick={() => setShowCryptoModal(true)}
+                variant="outline"
+                className="w-full flex items-center gap-2"
+              >
+                <Send className="w-4 h-4" />
+                {cryptoTransferData ? 'Update Crypto Transfer' : 'Set Up Crypto Transfer'}
+              </Button>
+              
+              {cryptoTransferData && (
+                <div className="bg-white p-3 rounded border">
+                  <p className="text-sm font-medium text-green-600 mb-1">
+                    ✓ Crypto Transfer Ready
+                  </p>
+                  <p className="text-xs text-gray-600">
+                    {cryptoTransferData.amount} {cryptoTransferData.token?.symbol || 'ETH'} → {cryptoTransferData.to.slice(0, 6)}...{cryptoTransferData.to.slice(-4)}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    TX: {cryptoTransferData.hash.slice(0, 10)}...{cryptoTransferData.hash.slice(-8)}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </CardContent>
       <CardFooter>
         <Button 
@@ -513,9 +564,18 @@ const AdvancedEmailComposer = ({ userProfile, onEmailSent }) => {
           disabled={sending || !emailData.from_address || !emailData.to_addresses.length || !emailData.subject || (userProfile?.email_credits || 0) <= 0}
           className="w-full"
         >
-          {sending ? 'Sending to IPFS & Blockchain...' : `Send Email (${userProfile?.email_credits || 0} credits remaining)`}
+          {sending ? 'Sending to IPFS & Blockchain...' : `Send Email${includeCrypto && cryptoTransferData ? ' + Crypto' : ''} (${userProfile?.email_credits || 0} credits remaining)`}
         </Button>
       </CardFooter>
+
+      {/* Crypto Transfer Modal */}
+      <CryptoTransferModal
+        isOpen={showCryptoModal}
+        onClose={() => setShowCryptoModal(false)}
+        onTransferComplete={handleCryptoTransferComplete}
+        recipientEmail={emailData.to_addresses[0]}
+        includeInEmail={true}
+      />
     </Card>
   );
 };
