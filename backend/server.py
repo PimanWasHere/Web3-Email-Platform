@@ -675,6 +675,9 @@ wallet_auth_service = WalletAuthService()
 advanced_email_service = AdvancedEmailService()
 payment_service = PaymentService()
 
+# Initialize analytics service with database
+analytics_service = AdvancedAnalyticsService(db)
+
 # Dependency for authentication
 async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> Dict[str, Any]:
     """Extract current user from JWT token"""
