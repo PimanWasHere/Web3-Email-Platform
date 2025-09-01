@@ -453,10 +453,15 @@ class PaymentService:
     
     async def initialize_stripe(self, request: Request):
         """Initialize Stripe checkout with dynamic webhook URL"""
-        if STRIPE_API_KEY:
-            host_url = str(request.base_url).rstrip('/')
-            webhook_url = f"{host_url}/api/webhook/stripe"
-            self.stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+        if STRIPE_API_KEY and not self.stripe_checkout:
+            try:
+                from emergentintegrations.payments.stripe.checkout import StripeCheckout
+                host_url = str(request.base_url).rstrip('/')
+                webhook_url = f"{host_url}/api/webhook/stripe"
+                self.stripe_checkout = StripeCheckout(api_key=STRIPE_API_KEY, webhook_url=webhook_url)
+            except Exception as e:
+                logging.warning(f"Failed to initialize Stripe checkout: {e}")
+                self.stripe_checkout = None
     
     async def create_subscription_checkout(self, package_name: str, user_id: str, 
                                          origin_url: str, request: Request) -> CheckoutSessionResponse:
