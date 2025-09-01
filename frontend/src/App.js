@@ -27,8 +27,9 @@ import CryptoTransferModal from "./components/CryptoTransferModal";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 const API = `${BACKEND_URL}/api`;
 
-// Wallet connection hook
+// Enhanced Wallet connection hook with MetaMask integration
 const useWallet = () => {
+  const web3 = useWeb3();
   const [walletConnected, setWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState('');
   const [walletType, setWalletType] = useState('');
@@ -39,23 +40,12 @@ const useWallet = () => {
     try {
       setLoading(true);
       setError('');
-
-      if (!window.ethereum) {
-        throw new Error('MetaMask not found. Please install MetaMask.');
-      }
-
-      const accounts = await window.ethereum.request({
-        method: 'eth_requestAccounts'
-      });
-
-      if (accounts.length === 0) {
-        throw new Error('No accounts found');
-      }
-
-      setWalletAddress(accounts[0]);
+      
+      const address = await web3.connectWallet();
+      setWalletAddress(address);
       setWalletType('metamask');
       setWalletConnected(true);
-      localStorage.setItem('walletAddress', accounts[0]);
+      localStorage.setItem('walletAddress', address);
       localStorage.setItem('walletType', 'metamask');
 
     } catch (error) {
@@ -88,6 +78,7 @@ const useWallet = () => {
   };
 
   const disconnectWallet = () => {
+    web3.disconnectWallet();
     setWalletConnected(false);
     setWalletAddress('');
     setWalletType('');
@@ -100,14 +91,8 @@ const useWallet = () => {
 
   const signMessage = async (message) => {
     try {
-      if (walletType === 'metamask') {
-        if (!window.ethereum) {
-          throw new Error('MetaMask not found');
-        }
-        return await window.ethereum.request({
-          method: 'personal_sign',
-          params: [message, walletAddress],
-        });
+      if (walletType === 'metamask' && web3.signer) {
+        return await web3.signer.signMessage(message);
       } else if (walletType === 'hashpack') {
         return "0x" + Array.from({length: 130}, () => Math.floor(Math.random() * 16).toString(16)).join('');
       }
@@ -118,14 +103,25 @@ const useWallet = () => {
   };
 
   useEffect(() => {
+    // Check for existing connection from localStorage
     const savedAddress = localStorage.getItem('walletAddress');
     const savedType = localStorage.getItem('walletType');
+    
     if (savedAddress && savedType) {
       setWalletAddress(savedAddress);
       setWalletType(savedType);
       setWalletConnected(true);
     }
-  }, []);
+    
+    // If MetaMask is connected via web3 hook, sync the state
+    if (web3.isConnected && web3.account) {
+      setWalletAddress(web3.account);
+      setWalletType('metamask');
+      setWalletConnected(true);
+      localStorage.setItem('walletAddress', web3.account);
+      localStorage.setItem('walletType', 'metamask');
+    }
+  }, [web3.isConnected, web3.account]);
 
   return {
     walletConnected,
@@ -136,7 +132,9 @@ const useWallet = () => {
     connectMetaMask,
     connectHashPack,
     disconnectWallet,
-    signMessage
+    signMessage,
+    // Expose web3 functionalities
+    web3
   };
 };
 
