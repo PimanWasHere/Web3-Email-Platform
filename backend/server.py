@@ -127,12 +127,12 @@ class WalletAuthService:
             print(f"Ethereum signature verification failed: {e}")
             return False
     
-    def _verify_hedera_signature(self, message: str, signature: str, public_key_hex: str) -> bool:
+    def _verify_hedera_signature(self, message: str, signature: str, wallet_address: str) -> bool:
         """Verify Hedera/HashPack signature (simplified for demo)"""
         try:
             # In a real implementation, you would use Hedera SDK to verify
-            # For now, we'll simulate verification
-            return len(signature) > 50 and len(public_key_hex) > 50
+            # For now, we'll simulate verification based on signature length and valid Hedera address format
+            return len(signature) > 50 and wallet_address.startswith('0.0.')
         except Exception as e:
             print(f"Hedera signature verification failed: {e}")
             return False
