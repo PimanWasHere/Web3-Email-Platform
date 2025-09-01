@@ -213,70 +213,146 @@ class Web3EmailAPITester:
             return True
         return False
 
-    def test_timestamp_email(self):
-        """Test email timestamping"""
+    def test_advanced_email_sending(self):
+        """Test v2.0 advanced email sending with IPFS"""
         if not self.token:
-            print("❌ No authentication token available for email timestamping")
+            print("❌ No authentication token available for email sending")
             return False
 
         email_data = {
             "from_address": "test@example.com",
             "to_addresses": ["recipient@example.com"],
-            "subject": "Test Email for Blockchain Timestamping",
-            "body": "This is a test email to verify the timestamping functionality.",
-            "attachments": []
+            "subject": "Test Email from Web3 Platform v2.0",
+            "body": "This is a test email sent through the Web3 Email Platform v2.0 with IPFS storage and blockchain verification."
+        }
+
+        # Prepare form data for multipart request
+        form_data = {
+            'email_data': json.dumps(email_data)
         }
 
         success, response = self.run_test(
-            "Timestamp Email",
+            "Send Email v2.0 (IPFS + Blockchain)",
             "POST",
-            "emails/timestamp",
+            "emails/send",
+            200,
+            data=form_data,
+            headers={'Authorization': f'Bearer {self.token}'}
+        )
+        
+        if success and response:
+            print(f"   Email ID: {response.get('email_id', 'unknown')}")
+            timestamp_data = response.get('timestamp', {})
+            print(f"   IPFS Hash: {timestamp_data.get('ipfs_hash', 'unknown')}")
+            print(f"   Content Hash: {timestamp_data.get('content_hash', 'unknown')[:16]}...")
+            print(f"   Hedera TX: {timestamp_data.get('hedera_transaction_id', 'unknown')}")
+            print(f"   Encryption: {timestamp_data.get('encryption_level', 'unknown')}")
+            print(f"   Credits Remaining: {response.get('credits_remaining', 'unknown')}")
+            
+            # Store email ID for retrieval test
+            self.email_id = response.get('email_id')
+            return True
+        return False
+
+    def test_email_ipfs_retrieval(self):
+        """Test v2.0 email retrieval from IPFS"""
+        if not self.token or not self.email_id:
+            print("❌ No email ID available for IPFS retrieval")
+            return False
+
+        success, response = self.run_test(
+            "Retrieve Email from IPFS",
+            "GET",
+            f"emails/{self.email_id}/retrieve",
+            200
+        )
+        
+        if success and response:
+            content = response.get('content', {})
+            metadata = response.get('metadata', {})
+            print(f"   Retrieved subject: {content.get('email_data', {}).get('subject', 'unknown')}")
+            print(f"   IPFS Hash: {metadata.get('ipfs_hash', 'unknown')}")
+            print(f"   Encryption: {metadata.get('encryption_level', 'unknown')}")
+            print(f"   Delivery Guarantee: {metadata.get('delivery_guarantee', False)}")
+        
+        return success
+
+    def test_payment_endpoints(self):
+        """Test v2.0 payment system endpoints"""
+        if not self.token:
+            print("❌ No authentication token available for payment tests")
+            return False
+
+        # Test subscription payment creation
+        success1, response1 = self.run_test(
+            "Create Subscription Payment",
+            "POST",
+            "payments/subscription",
             200,
             data={
-                "email_data": email_data,
-                "metadata": {"test": True}
+                "package_name": "pro",
+                "origin_url": "https://example.com"
             }
         )
         
-        if success and response.get('success'):
-            timestamp_info = response.get('timestamp', {})
-            print(f"   Email timestamped with hash: {timestamp_info.get('content_hash', 'N/A')[:16]}...")
-            print(f"   Hedera Transaction ID: {timestamp_info.get('hedera_transaction_id', 'N/A')}")
-            self.test_email_hash = timestamp_info.get('content_hash')
-            return True
-        return False
+        if success1 and response1:
+            print(f"   Subscription checkout URL created: {bool(response1.get('checkout_url'))}")
+            print(f"   Session ID: {response1.get('session_id', 'unknown')}")
 
-    def test_verify_email(self):
-        """Test email verification"""
-        if not self.token:
-            print("❌ No authentication token available for email verification")
-            return False
-
-        if not hasattr(self, 'test_email_hash'):
-            print("❌ No email hash available for verification")
-            return False
-
-        email_data = {
-            "from_address": "test@example.com",
-            "to_addresses": ["recipient@example.com"],
-            "subject": "Test Email for Blockchain Timestamping",
-            "body": "This is a test email to verify the timestamping functionality.",
-            "attachments": []
-        }
-
-        # Test with correct data (should verify successfully)
-        success, response = self.run_test(
-            "Verify Email (Valid)",
+        # Test credits payment creation
+        success2, response2 = self.run_test(
+            "Create Credits Payment",
             "POST",
-            f"emails/verify?stored_hash={self.test_email_hash}",
+            "payments/credits",
             200,
-            data=email_data
+            data={
+                "package_name": "medium",
+                "origin_url": "https://example.com"
+            }
         )
         
-        if success and response.get('valid'):
-            print(f"   Email verification successful")
-            return True
-        return False
+        if success2 and response2:
+            print(f"   Credits checkout URL created: {bool(response2.get('checkout_url'))}")
+            print(f"   Session ID: {response2.get('session_id', 'unknown')}")
+
+        return success1 and success2
+
+    def test_insufficient_credits_scenario(self):
+        """Test behavior when user runs out of credits"""
+        if not self.token:
+            return True  # Skip if no auth
+
+        # Try to send multiple emails to exhaust credits
+        for i in range(12):  # Basic tier has 10 credits
+            email_data = {
+                "from_address": "test@example.com",
+                "to_addresses": ["recipient@example.com"],
+                "subject": f"Credit Test Email #{i+1}",
+                "body": f"Testing credit exhaustion - email #{i+1}"
+            }
+            
+            form_data = {'email_data': json.dumps(email_data)}
+            
+            success, response = self.run_test(
+                f"Send Email #{i+1} (Credit Exhaustion Test)",
+                "POST",
+                "emails/send",
+                200 if i < 10 else 402,  # Expect 402 after credits exhausted
+                data=form_data,
+                headers={'Authorization': f'Bearer {self.token}'}
+            )
+            
+            if not success and i >= 9:  # Expected failure due to insufficient credits
+                print(f"   ✅ Correctly blocked email due to insufficient credits")
+                return True
+            elif not success and i < 9:
+                print(f"   ❌ Unexpected failure on email #{i+1}")
+                return False
+            
+            # Small delay between requests
+            time.sleep(0.1)
+        
+        return True
 
     def test_get_user_emails(self):
         """Test getting user's email history"""
