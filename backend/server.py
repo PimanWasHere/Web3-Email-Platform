@@ -748,7 +748,7 @@ async def send_email_advanced(
         
         # Store email with advanced features
         email_record = await advanced_email_service.store_email_with_ipfs(
-            email_data=email_data,
+            email_data=email_data_dict,
             user_id=current_user["user_id"],
             encryption_level=encryption_level,
             delivery_guarantee=delivery_guarantee
