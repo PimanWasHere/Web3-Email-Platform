@@ -203,6 +203,26 @@ class SubscriptionTier(BaseModel):
     max_attachment_size: int  # in MB
     encryption_level: str
 
+class RicardianContractRequest(BaseModel):
+    agreement_data: Dict[str, Any]
+    parties: List[str]
+
+class CryptoTransaction(BaseModel):
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    user_id: str
+    transaction_hash: Optional[str] = None
+    from_address: str
+    to_address: str
+    token_address: Optional[str] = None
+    amount: Optional[str] = None
+    token_id: Optional[int] = None
+    transaction_type: str  # "token_transfer", "nft_transfer", "eth_transfer"
+    status: str = "pending"  # pending, confirmed, failed
+    email_id: Optional[str] = None
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    confirmed_at: Optional[datetime] = None
+    metadata: Optional[Dict[str, Any]] = None
+
 # Subscription tiers configuration
 SUBSCRIPTION_TIERS = {
     "basic": SubscriptionTier(
