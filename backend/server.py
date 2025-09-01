@@ -1339,6 +1339,9 @@ async def get_user_crypto_transactions(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to get crypto transactions: {str(e)}"
         )
+
+@api_router.get("/user/profile")
+async def get_user_profile(current_user: Dict[str, Any] = Depends(get_current_user)):
     """Get user profile and subscription info"""
     try:
         user_doc = await db.users.find_one({"id": current_user["user_id"]})
