@@ -297,8 +297,9 @@ class WalletAuthService:
             # Create or get user
             user_doc = await db.users.find_one({"wallet_address": wallet_address})
             if not user_doc:
-                user = User(wallet_address=wallet_address, wallet_type=wallet_type)
-                await db.users.insert_one(user.dict())
+                user = User(wallet_address=wallet_address, wallet_type=wallet_type, email_credits=10)
+                user_dict = user.dict()
+                await db.users.insert_one(user_dict)
                 user_id = user.id
                 subscription_tier = "basic"
                 email_credits = 10  # Free tier credits
@@ -306,6 +307,14 @@ class WalletAuthService:
                 user_id = user_doc["id"]
                 subscription_tier = user_doc.get("subscription_tier", "basic")
                 email_credits = user_doc.get("email_credits", 0)
+                
+                # Fix for existing users with 0 credits - grant basic tier credits
+                if email_credits == 0 and subscription_tier == "basic":
+                    await db.users.update_one(
+                        {"wallet_address": wallet_address},
+                        {"$set": {"email_credits": 10}}
+                    )
+                    email_credits = 10
             
             # Create JWT token
             token_data = {
