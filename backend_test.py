@@ -286,32 +286,24 @@ class Web3EmailAPITester:
             print("❌ No authentication token available for payment tests")
             return False
 
-        # Test subscription payment creation
+        # Test subscription payment creation with query parameters
         success1, response1 = self.run_test(
             "Create Subscription Payment",
             "POST",
-            "payments/subscription",
-            200,
-            data={
-                "package_name": "pro",
-                "origin_url": "https://example.com"
-            }
+            "payments/subscription?package_name=pro&origin_url=https://example.com",
+            200
         )
         
         if success1 and response1:
             print(f"   Subscription checkout URL created: {bool(response1.get('checkout_url'))}")
             print(f"   Session ID: {response1.get('session_id', 'unknown')}")
 
-        # Test credits payment creation
+        # Test credits payment creation with query parameters
         success2, response2 = self.run_test(
             "Create Credits Payment",
             "POST",
-            "payments/credits",
-            200,
-            data={
-                "package_name": "medium",
-                "origin_url": "https://example.com"
-            }
+            "payments/credits?package_name=medium&origin_url=https://example.com",
+            200
         )
         
         if success2 and response2:
