@@ -83,13 +83,78 @@ class Web3EmailAPITester:
             return False, {}
 
     def test_health_check(self):
-        """Test API health check"""
+        """Test API health check with v2.0 services"""
         success, response = self.run_test(
-            "Health Check",
+            "Health Check v2.0",
             "GET",
             "health",
             200
         )
+        
+        if success and response:
+            services = response.get('services', {})
+            print(f"   Version: {response.get('version', 'unknown')}")
+            print(f"   IPFS Status: {services.get('ipfs', 'unknown')}")
+            print(f"   Stripe Status: {services.get('stripe', 'unknown')}")
+            print(f"   Hedera Status: {services.get('hedera', 'unknown')}")
+        
+        return success
+
+    def test_subscription_tiers(self):
+        """Test v2.0 subscription tiers endpoint"""
+        success, response = self.run_test(
+            "Get Subscription Tiers",
+            "GET",
+            "subscription/tiers",
+            200
+        )
+        
+        if success and response:
+            tiers = response.get('tiers', {})
+            print(f"   Available tiers: {list(tiers.keys())}")
+            for tier_name, tier_data in tiers.items():
+                print(f"   - {tier_name}: ${tier_data.get('price', 0)}/month, {tier_data.get('credits_per_month', 0)} credits")
+        
+        return success
+
+    def test_credit_packages(self):
+        """Test v2.0 credit packages endpoint"""
+        success, response = self.run_test(
+            "Get Credit Packages",
+            "GET",
+            "credits/packages",
+            200
+        )
+        
+        if success and response:
+            packages = response.get('packages', {})
+            print(f"   Available packages: {list(packages.keys())}")
+            for pkg_name, pkg_data in packages.items():
+                print(f"   - {pkg_name}: {pkg_data.get('credits', 0)} credits for ${pkg_data.get('price', 0)}")
+        
+        return success
+
+    def test_user_profile(self):
+        """Test v2.0 user profile endpoint"""
+        if not self.token:
+            print("❌ No authentication token available for user profile")
+            return False
+
+        success, response = self.run_test(
+            "Get User Profile v2.0",
+            "GET",
+            "user/profile",
+            200
+        )
+        
+        if success and response:
+            print(f"   User ID: {response.get('user_id', 'unknown')}")
+            print(f"   Subscription: {response.get('subscription_tier', 'unknown')}")
+            print(f"   Credits: {response.get('email_credits', 0)}")
+            print(f"   Features: {len(response.get('premium_features', []))}")
+            tier_details = response.get('tier_details', {})
+            print(f"   Max Attachment: {tier_details.get('max_attachment_size', 0)}MB")
+        
         return success
 
     def test_root_endpoint(self):
