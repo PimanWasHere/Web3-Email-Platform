@@ -355,13 +355,13 @@ class Web3EmailAPITester:
         return True
 
     def test_get_user_emails(self):
-        """Test getting user's email history"""
+        """Test getting user's email history with v2.0 features"""
         if not self.token:
             print("❌ No authentication token available for getting user emails")
             return False
 
         success, response = self.run_test(
-            "Get User Emails",
+            "Get User Email History v2.0",
             "GET",
             "emails/user",
             200
@@ -369,7 +369,16 @@ class Web3EmailAPITester:
         
         if success:
             email_count = response.get('count', 0)
+            emails = response.get('emails', [])
             print(f"   Found {email_count} emails for user")
+            
+            if emails:
+                latest_email = emails[0]
+                print(f"   Latest email subject: {latest_email.get('email_data', {}).get('subject', 'unknown')}")
+                print(f"   IPFS Hash: {latest_email.get('ipfs_hash', 'none')}")
+                print(f"   Encryption Level: {latest_email.get('encryption_level', 'unknown')}")
+                print(f"   Delivery Guarantee: {latest_email.get('delivery_guarantee', False)}")
+            
             return True
         return False
 
